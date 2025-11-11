@@ -54,6 +54,7 @@ function Cliente() {
   const [clientes, setClientes] = useState([]);
   const [cas, setCas] = useState([]);
   const [selectedCliente, setSelectedCliente] = useState(null);
+  const [filtroStatus, setFiltroStatus] = useState("todos");
   const [formData, setFormData] = useState({});
   const [editFormData, setEditFormData] = useState({});
 
@@ -167,6 +168,14 @@ function Cliente() {
   useEffect(() => {
     fetchCas();
   }, [isOpenCriar, isOpenEditar]);
+
+  const clientesFiltrados = clientes.filter((cliente) => {
+    if (filtroStatus === "todos") return true;
+    if (filtroStatus === "ativos") return cliente.statusCliente === "ATIVO";
+    if (filtroStatus === "inativos") return cliente.statusCliente === "INATIVO";
+    return true;
+  });
+
   return (
     <div className="w-full h-full flex flex-col gap-5 p-5">
       <Card radius="sm">
@@ -174,6 +183,21 @@ function Cliente() {
           <div className="w-full flex justify-between items-center">
             <h1 className="text-gray-700 text-3xl font-sans">Clientes</h1>
             <div className="flex gap-2">
+              <Select
+                radius="sm"
+                variant="faded"
+                selectedKeys={[filtroStatus]}
+                onSelectionChange={(keys) => {
+                  const value = Array.from(keys)[0];
+                  setFiltroStatus(value);
+                }}
+                className="w-48"
+              >
+                <SelectItem key="todos">Todos</SelectItem>
+                <SelectItem key="ativos">Ativos</SelectItem>
+                <SelectItem key="inativos">Inativos</SelectItem>
+              </Select>
+
               <Tooltip content="Recarregar">
                 <Button
                   isIconOnly
@@ -218,7 +242,7 @@ function Cliente() {
           <TableColumn>AÇÕES</TableColumn>
         </TableHeader>
         <TableBody emptyContent="Nenhum cliente encontrado">
-          {clientes.map((cliente) => (
+          {clientesFiltrados.map((cliente) => (
             <TableRow key={cliente.id}>
               <TableCell>{cliente.codigoCliente}</TableCell>
               <TableCell>{cliente.nomeCliente}</TableCell>

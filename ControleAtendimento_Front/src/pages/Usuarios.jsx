@@ -69,6 +69,7 @@ function Usuarios() {
   const [selectedUser, setSelectedUser] = useState(null);
   const [loading, setLoading] = useState(false);
   const [novaSenha, setNovaSenha] = useState("");
+  const [filtroStatus, setFiltroStatus] = useState("ativos");
   const [formData, setFormData] = useState({
     nomeUsuario: "",
     email: "",
@@ -84,6 +85,20 @@ function Usuarios() {
     cargo: "USUARIO",
     isAdmin: false,
   });
+
+  const getLoggedUserId = () => {
+    const userData = localStorage.getItem("usuario");
+    if (userData) {
+      try {
+        const user = JSON.parse(userData);
+        return user.id;
+      } catch (error) {
+        console.error("Erro ao recuperar dados do usuário logado:", error);
+        return null;
+      }
+    }
+    return null;
+  };
 
   const fetchUsuarios = async () => {
     setLoading(true);
@@ -126,6 +141,7 @@ function Usuarios() {
         description: "O usuário foi criado com sucesso.",
         color: "success",
       });
+      fetchUsuarios();
     } catch (error) {
       addToast({
         title: "Erro ao criar usuário",
@@ -147,6 +163,10 @@ function Usuarios() {
       isAdmin: usuario.isAdmin,
     });
     onOpenEditar();
+  };
+  const isEditingSelf = () => {
+    const loggedUserId = getLoggedUserId();
+    return selectedUser && loggedUserId && selectedUser.id === loggedUserId;
   };
 
   const handleReativarUsuario = async (id) => {
@@ -244,19 +264,12 @@ function Usuarios() {
     fetchUsuarios();
   }, []);
 
-  useEffect(() => {
-    if (formData.cargo === "ADM") {
-      setFormData({ ...formData, isAdmin: true });
-    }
-  }, [formData.cargo]);
-
-  useEffect(() => {
-    if (editFormData.cargo === "ADM") {
-      setEditFormData({ ...editFormData, isAdmin: true });
-    } else {
-      setEditFormData({ ...editFormData, isAdmin: false });
-    }
-  }, [editFormData.cargo]);
+  const usuariosFiltrados = usuarios.filter((usuario) => {
+    if (filtroStatus === "todos") return true;
+    if (filtroStatus === "ativos") return usuario.isActive === true;
+    if (filtroStatus === "inativos") return usuario.isActive === false;
+    return true;
+  });
 
   return (
     <div className="w-full h-full flex flex-col gap-5 p-5">
@@ -265,6 +278,21 @@ function Usuarios() {
           <div className="w-full flex justify-between items-center">
             <h1 className="text-gray-700 text-3xl font-sans">Usuários</h1>
             <div className="flex gap-2">
+              <Select
+                radius="sm"
+                variant="faded"
+                selectedKeys={[filtroStatus]}
+                onSelectionChange={(keys) => {
+                  const value = Array.from(keys)[0];
+                  setFiltroStatus(value);
+                }}
+                className="w-48"
+              >
+                <SelectItem key="todos">Todos</SelectItem>
+                <SelectItem key="ativos">Ativos</SelectItem>
+                <SelectItem key="inativos">Inativos</SelectItem>
+              </Select>
+
               <Tooltip content="Recarregar">
                 <Button
                   isIconOnly
@@ -307,7 +335,7 @@ function Usuarios() {
           <TableColumn>AÇÕES</TableColumn>
         </TableHeader>
         <TableBody emptyContent="Nenhum usuário encontrado">
-          {usuarios.map((usuario) => (
+          {usuariosFiltrados.map((usuario) => (
             <TableRow key={usuario.id}>
               <TableCell>{usuario.nomeUsuario}</TableCell>
               <TableCell>
@@ -442,10 +470,12 @@ function Usuarios() {
                   <Select
                     isRequired
                     radius="sm"
-                    defaultSelectedKeys={[formData.cargo]}
-                    onValueChange={(value) =>
-                      setFormData({ ...formData, cargo: value })
-                    }
+                    selectedKeys={[formData.cargo]}
+                    onSelectionChange={(keys) => {
+                      const cargo = Array.from(keys)[0];
+                      const isAdmin = cargo === "ADM";
+                      setFormData({ ...formData, cargo, isAdmin });
+                    }}
                   >
                     <SelectItem key={"USUARIO"}>USUARIO</SelectItem>
                     <SelectItem key={"ADM"}>ADM</SelectItem>
@@ -533,8 +563,15 @@ function Usuarios() {
                     selectedKeys={[editFormData.cargo]}
                     onSelectionChange={(keys) => {
                       const cargo = Array.from(keys)[0];
-                      setEditFormData({ ...editFormData, cargo });
+                      const isAdmin = cargo === "ADM";
+                      setEditFormData({ ...editFormData, cargo, isAdmin });
                     }}
+                    isDisabled={isEditingSelf()}
+                    description={
+                      isEditingSelf()
+                        ? "Você não pode alterar seu próprio cargo"
+                        : undefined
+                    }
                   >
                     <SelectItem key={"USUARIO"}>USUARIO</SelectItem>
                     <SelectItem key={"ADM"}>ADM</SelectItem>
