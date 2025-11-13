@@ -256,8 +256,6 @@ function Home() {
     setSelectedAtendimento(atendimento);
     console.log(atendimento);
     await fetchClientePorCaEditar(atendimento.ca.id.toString());
-
-    // Formata as datas para o formato local do input datetime-local
     const formatToDatetimeLocal = (isoDate) => {
       if (!isoDate) return "";
       const date = new Date(isoDate);
@@ -287,7 +285,36 @@ function Home() {
 
   const handleEnviarEdicao = async () => {
     try {
-      // Converte as datas do formato datetime-local para ISO
+      if (editFormData.dataFim) {
+        const dataFimDate = new Date(editFormData.dataFim);
+        const agora = new Date();
+
+        if (dataFimDate > agora) {
+          addToast({
+            title: "Erro",
+            description:
+              "A data de término não pode ser futura. Por favor, selecione uma data até o momento atual.",
+            color: "danger",
+          });
+          return;
+        }
+      }
+
+      if (editFormData.dataFim && editFormData.dataInicio) {
+        const dataFimDate = new Date(editFormData.dataFim);
+        const dataInicioDate = new Date(editFormData.dataInicio);
+
+        if (dataFimDate < dataInicioDate) {
+          addToast({
+            title: "Erro",
+            description:
+              "A data de término não pode ser anterior à data de início.",
+            color: "danger",
+          });
+          return;
+        }
+      }
+
       const dataToSend = {
         ...editFormData,
         dataInicio: editFormData.dataInicio
@@ -1208,6 +1235,8 @@ function Home() {
                       type="datetime-local"
                       label="Data e Hora de Término"
                       value={editFormData.dataFim || ""}
+                      min={editFormData.dataInicio || undefined}
+                      max={new Date().toISOString().slice(0, 16)}
                       onChange={(e) =>
                         setEditFormData({
                           ...editFormData,
@@ -1217,6 +1246,7 @@ function Home() {
                       variant="bordered"
                       radius="lg"
                       size="lg"
+                      description="Deve ser entre a data de início e a data atual"
                       classNames={{
                         label: "text-gray-700 font-semibold",
                         input: "text-gray-900",
@@ -1471,14 +1501,7 @@ function Home() {
                                   : "-"}
                               </p>
                             </div>
-                            <div className="col-span-2">
-                              <p className="text-xs uppercase tracking-wide font-semibold text-gray-500 mb-1">
-                                👤 Responsável
-                              </p>
-                              <p className="text-base font-medium text-gray-800">
-                                {selectedAtendimento.usuario?.nome || "-"}
-                              </p>
-                            </div>
+                            
                           </div>
                         </CardBody>
                       </Card>
